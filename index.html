@@ -3,76 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geolocation Visualization with p5.js</title>
+    <title>Running Path Visualization with Mapbox</title>
     <style>
-        body {
+        body, html {
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #121212;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
+            width: 100%;
+            height: 100%;
         }
-        #defaultCanvas0 {
-            display: block;
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none; /* 지도와의 상호작용을 방해하지 않음 */
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 </head>
 <body>
+    <div id="map"></div>
     <script>
-        let latitude = 0;
-        let longitude = 0;
-        let accuracy = 0;
-        let isLocationLoaded = false;
+        const MAPBOX_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN'; // 여기에 Mapbox 액세스 토큰을 입력하세요
+        let map;
+        let path = []; // 이동 경로를 저장할 배열
+        let userMarker;
 
         function setup() {
-            createCanvas(800, 600);
-            textAlign(CENTER, CENTER);
-            textSize(16);
+            createCanvas(windowWidth, windowHeight);
+            noFill();
 
+            // Mapbox 지도 초기화
+            mapboxgl.accessToken = MAPBOX_TOKEN;
+            map = new mapboxgl.Map({
+                container: 'map', // HTML 요소 ID
+                style: 'mapbox://styles/mapbox/streets-v12', // 지도 스타일
+                center: [126.9780, 37.5665], // 초기 중심 좌표 (서울)
+                zoom: 15
+            });
+
+            // Geolocation으로 사용자 위치 추적
             if (navigator.geolocation) {
-                // 위치를 지속적으로 업데이트
                 navigator.geolocation.watchPosition(
-                    (position) => {
-                        latitude = position.coords.latitude;
-                        longitude = position.coords.longitude;
-                        accuracy = position.coords.accuracy;
-                        isLocationLoaded = true;
-                    },
-                    (error) => {
-                        console.error("위치 정보를 가져올 수 없습니다.", error);
-                    },
-                    {
-                        enableHighAccuracy: true,
-                    }
+                    updatePosition,
+                    (error) => console.error("위치 정보를 가져올 수 없습니다.", error),
+                    { enableHighAccuracy: true }
                 );
             } else {
                 console.error("Geolocation API를 지원하지 않는 브라우저입니다.");
             }
         }
 
-        function draw() {
-            background(30);
+        function updatePosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
 
-            if (isLocationLoaded) {
-                fill(0, 200, 100);
-                ellipse(map(longitude, -180, 180, 0, width), map(latitude, 90, -90, 0, height), 50, 50);
+            // 경로에 추가
+            path.push([longitude, latitude]);
 
-                fill(255);
-                text(
-                    `위도: ${latitude.toFixed(4)}\n경도: ${longitude.toFixed(4)}\n정확도: ${accuracy.toFixed(1)}m`,
-                    width / 2,
-                    height - 50
-                );
+            // 지도에 사용자 마커 추가 또는 업데이트
+            if (!userMarker) {
+                userMarker = new mapboxgl.Marker()
+                    .setLngLat([longitude, latitude])
+                    .addTo(map);
+                map.setCenter([longitude, latitude]); // 지도의 중심을 사용자 위치로 설정
             } else {
-                fill(255);
-                text("위치 데이터를 불러오는 중...", width / 2, height / 2);
+                userMarker.setLngLat([longitude, latitude]);
             }
+        }
+
+        function draw() {
+            clear(); // 캔버스 초기화
+
+            if (path.length > 1) {
+                stroke(255, 0, 0);
+                strokeWeight(3);
+
+                // 경로를 선으로 그리기
+                beginShape();
+                for (let coord of path) {
+                    const point = map.project(coord); // Mapbox 좌표를 픽셀 좌표로 변환
+                    vertex(point.x, point.y);
+                }
+                endShape();
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
         }
     </script>
 </body>
