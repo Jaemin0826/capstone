@@ -15,7 +15,6 @@
             color: #ffffff;
             font-family: Arial, sans-serif;
             height: 100vh;
-            width: 100vw;
             overflow: hidden;
         }
         #defaultCanvas0 {
@@ -36,9 +35,9 @@
             textAlign(CENTER, CENTER);
             textSize(16);
 
-            // Geolocation API 호출
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
+                // 위치를 지속적으로 업데이트
+                navigator.geolocation.watchPosition(
                     (position) => {
                         latitude = position.coords.latitude;
                         longitude = position.coords.longitude;
@@ -60,13 +59,16 @@
         function draw() {
             background(30);
 
-            // 위치 데이터 로딩 여부에 따라 화면 표시
             if (isLocationLoaded) {
                 fill(0, 200, 100);
                 ellipse(map(longitude, -180, 180, 0, width), map(latitude, 90, -90, 0, height), 50, 50);
 
                 fill(255);
-                text(`위도: ${latitude.toFixed(4)}\n경도: ${longitude.toFixed(4)}\n정확도: ${accuracy.toFixed(1)}m`, width / 2, height - 50);
+                text(
+                    `위도: ${latitude.toFixed(4)}\n경도: ${longitude.toFixed(4)}\n정확도: ${accuracy.toFixed(1)}m`,
+                    width / 2,
+                    height - 50
+                );
             } else {
                 fill(255);
                 text("위치 데이터를 불러오는 중...", width / 2, height / 2);
